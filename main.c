@@ -15,33 +15,34 @@
 #define WHITE  0
 #define BLACK  1
 
-#define DIR_N  (Pos){ 0,   1}
-#define DIR_NE (Pos){ 1,   1}
-#define DIR_E  (Pos){ 1,   0}
-#define DIR_SE (Pos){ 1,  -1}
-#define DIR_S  (Pos){ 0,  -1}
-#define DIR_SW (Pos){-1,  -1}
-#define DIR_W  (Pos){-1,   0}
-#define DIR_NW (Pos){-1,   1}
+#define NULL_PIECE (Piece){6, 0, 0}
+
+#define DIR_N  (Vec){ 0,   1}
+#define DIR_NE (Vec){ 1,   1}
+#define DIR_E  (Vec){ 1,   0}
+#define DIR_SE (Vec){ 1,  -1}
+#define DIR_S  (Vec){ 0,  -1}
+#define DIR_SW (Vec){-1,  -1}
+#define DIR_W  (Vec){-1,   0}
+#define DIR_NW (Vec){-1,   1}
 
 // knight movement
-#define DIR_NNE (Pos){ 1,  2}
-#define DIR_NEE (Pos){ 2,  1}
-#define DIR_SEE (Pos){ 2, -1}
-#define DIR_SSE (Pos){ 1, -2}
-#define DIR_SSW (Pos){-1, -2}
-#define DIR_SWW (Pos){-2, -1}
-#define DIR_NWW (Pos){-2,  1}
-#define DIR_NNW (Pos){-1,  2}
+#define DIR_NNE (Vec){ 1,  2}
+#define DIR_NEE (Vec){ 2,  1}
+#define DIR_SEE (Vec){ 2, -1}
+#define DIR_SSE (Vec){ 1, -2}
+#define DIR_SSW (Vec){-1, -2}
+#define DIR_SWW (Vec){-2, -1}
+#define DIR_NWW (Vec){-2,  1}
+#define DIR_NNW (Vec){-1,  2}
 
-typedef struct { unsigned int type:3, color:1, moved:1; }  Piece;
-typedef struct { unsigned int x:4, y:4; }                  Pos;
-typedef struct { Pos start, end; }                         Move;
+typedef struct { unsigned int type:3, color:1; bool moved:1; }  Piece;
+typedef struct { unsigned int x:4, y:4; }                  Vec;
 typedef Piece                                              Board[64];
 
-int posIndex(Pos pos) { return pos.x + pos.y * 8; }
-Pos indexPos(int index) {
-    Pos pos;
+int vecIndex(Vec pos) { return pos.x + pos.y * 8; }
+Vec indexVec(int index) {
+    Vec pos;
     pos.x = index * 8;
     pos.y = (index - pos.x) / 8;
     return pos;
@@ -52,10 +53,10 @@ int indexOf(int x, int y) { return x + y * 8; }
 int xOf(int index) { return index % 8; }
 int yOf(int index) { return (index - (index % 8)) / 8; }
 
-bool inBoard(Pos pos) { return pos.x >= 0 && pos.x < 8 && pos.y >= 0 && pos.y < 8; }
-Piece getPiece(Board board, Pos pos) { return board[posIndex(pos)]; }
-void setPiece(Board board, Pos pos, Piece piece) { board[posIndex(pos)] = piece; }
-bool occupied(Board board, Pos pos) { return getPiece(board, pos).type != EMPTY; }
+bool inBoard(Vec pos) { return pos.x >= 0 && pos.x < 8 && pos.y >= 0 && pos.y < 8; }
+Piece getPiece(Board board, Vec pos) { return board[vecIndex(pos)]; }
+void setPiece(Board board, Vec pos, Piece piece) { board[vecIndex(pos)] = piece; }
+bool occupied(Board board, Vec pos) { return getPiece(board, pos).type != EMPTY; }
 
 // ---- Printing ---- //
 
@@ -78,8 +79,8 @@ int charToPiece(char c) {
     p.color = (c == tolower(c)) ? WHITE : BLACK;
 }
 
-char pieceToChar(Piece p, bool tileParity) {
-    if ( p.type == EMPTY ) return tileParity ? '_' : '#';
+char pieceToChar(Piece p, Vec pos) {
+    if ( p.type == EMPTY ) return "_#"[(pos.x + pos.y) % 2];
     char result = "kqbnrp"[p.type];
     return p.color == WHITE ? result : toupper(result);
 }
@@ -87,17 +88,16 @@ char pieceToChar(Piece p, bool tileParity) {
 char xChar(int x) { return 'A' + x; }
 char yChar(int y) { return '0' + y; }
 
-void printPos(Pos pos) { printf("%c%c", xChar(pos.x), yChar(pos.y)); }
-void printMove(Move move) { printPos(move.start); putchar('-'); printPos(move.end); }
+void printVec(Vec pos) { printf("%c%c", xChar(pos.x), yChar(pos.y)); }
 
 void printBoard(Board board) {
-    int i;
     printf("\n    ABCDEFGH\n    ________");
+    int i;
     for( i = 0; i < 64; i++ ) {
         if ( xOf(i) == 0 ) printf("\n %d |", yOf(i));
-        putchar(pieceToChar( board[i], (xOf(i) + yOf(i)) % 2 ));
+        putchar(pieceToChar( board[i], indexVec(i)));
     }
-    putchar('\n');
+    printf("\n");
 }
 
 // ---- Logic ---- //
@@ -117,7 +117,7 @@ void initBoard(Board board) {
 }
 
 //Returns the max distance slid. Adds possible positions to moves array.
-int slide(Pos pos, Pos dir, int maxSlide, int color, Board board, Pos *moves) {
+int slide(Vec pos, Vec dir, int maxSlide, int color, Board board, Vec *moves) {
     int count = 0;
     while (count < maxSlide) {
         pos.x += dir.x;
@@ -136,16 +136,7 @@ int slide(Pos pos, Pos dir, int maxSlide, int color, Board board, Pos *moves) {
     return count;
 }
 
-int slideDiagonals(Pos pos, int maxSlide, int color, Board board, Pos *moves) {
-    int count = 0;
-    count += slide(pos, DIR_NE, maxSlide, color, board, moves + count );
-    count += slide(pos, DIR_SE, maxSlide, color, board, moves + count );
-    count += slide(pos, DIR_SW, maxSlide, color, board, moves + count );
-    count += slide(pos, DIR_NW, maxSlide, color, board, moves + count );
-    return count;
-}
-
-int slideCardinals(Pos pos, int maxSlide, int color, Board board, Pos *moves) {
+int slideCardinals(Vec pos, int maxSlide, int color, Board board, Vec *moves) {
     int count = 0;
     count += slide(pos, DIR_N, maxSlide, color, board, moves + count );
     count += slide(pos, DIR_E, maxSlide, color, board, moves + count );
@@ -154,7 +145,16 @@ int slideCardinals(Pos pos, int maxSlide, int color, Board board, Pos *moves) {
     return count;
 }
 
-int getMoves(Pos pos, int type, bool moved, int color, Board board, Pos *moves) {
+int slideDiagonals(Vec pos, int maxSlide, int color, Board board, Vec *moves) {
+    int count = 0;
+    count += slide(pos, DIR_NE, maxSlide, color, board, moves + count );
+    count += slide(pos, DIR_SE, maxSlide, color, board, moves + count );
+    count += slide(pos, DIR_SW, maxSlide, color, board, moves + count );
+    count += slide(pos, DIR_NW, maxSlide, color, board, moves + count );
+    return count;
+}
+
+int getMoves(Vec pos, int type, bool moved, int color, Board board, Vec *moves) {
     int count = 0;
     switch(type) {
         case KING: {
@@ -188,10 +188,19 @@ int getMoves(Pos pos, int type, bool moved, int color, Board board, Pos *moves) 
     return count;
 }
 
-int getMovesForPiece(Pos pos, Board board, Pos *moves){
+int getMovesForPiece(Vec pos, Board board, Vec *moves){
     Piece p = getPiece(board, pos);
     return getMoves(pos, p.type, p.moved, p.color, board, moves);
 }
+
+void movePiece(Board board, Vec from, Vec to) {
+    Piece p = getPiece(board, from);
+    p.moved = true;
+    setPiece(board, from, NULL_PIECE);
+    setPiece(board, to, p);
+}
+
+// ---- Program ---- //
 
 int main()
 {
@@ -199,19 +208,26 @@ int main()
     initBoard(board);
     printBoard(board);
 
-    Pos moves[64];
-    Pos pos = (Pos){1, 0};
+    movePiece(board, (Vec){0,1}, (Vec){0,2});
+
+    printBoard(board);
+
+    /*
+    Vec moves[64];
+    Vec pos = (Vec){0, 2};
 
     int count = getMovesForPiece(pos, board, moves);
 
-    printf("\n%c\n", pieceToChar(getPiece(board, pos), true));
-    printf("\nResults count: %i\n", count);
+    printf("\nPiece type: %c\n", pieceToChar(getPiece(board, pos), pos));
+    printf("Results count: %i\n", count);
 
     int i;
     for ( i = 0; i < count; i++ ) {
-        printPos(moves[i]);
-        putchar('\n');
+        printVec(moves[i]);
+        if (i != count - 1) printf(", ");
     }
+    printf("\n");
+    */
 
     return 0;
 }
