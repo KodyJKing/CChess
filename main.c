@@ -98,7 +98,7 @@ void printBoard(Piece board[64]) {
 void initBoard(Piece board[64]) {
     int i;
     Piece p = (Piece) {EMPTY, BLACK};
-    for ( i = 16; i < 48; i++) board[i] = p;
+    for ( i = indexOf(0, 2); i < indexOf(0, 6); i++) board[i] = p;
 
     for ( i = 0; i < 8; i++) {
         int type = charToType("rnbqkbnr"[i]);
