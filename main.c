@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 // ---- Representation ---- //
 
@@ -16,7 +17,26 @@ const int BLACK = 1;
 
 typedef struct {
     unsigned int type:3, color:1, moved:1;
-} piece;
+} Piece;
+
+typedef struct {
+    unsigned int x:3, y:3;
+} Pos;
+
+typedef struct {
+    Pos start, end;
+} Move;
+
+int posIndex(Pos pos) {
+    return pos.x + pos.y * 8;
+}
+
+Pos indexPos(int index) {
+    Pos pos;
+    pos.x = index * 8;
+    pos.y = (index - pos.x) / 8;
+    return pos;
+}
 
 int indexOf(int x, int y) {
     return x + y * 8;
@@ -46,17 +66,24 @@ int charToType(char c) {
 }
 
 int charToPiece(char c) {
-    piece p;
+    Piece p;
     p.type = charToType(c);
     p.color = (c == tolower(c)) ? WHITE : BLACK;
 }
 
-char pieceToChar(piece p) {
+char pieceToChar(Piece p) {
     char result = "kqbnrp."[p.type];
     return p.color == WHITE ? result : toupper(result);
 }
 
-void printBoard(piece board[64]) {
+char xChar(int x) { return 'a' + x; }
+char yChar(int y) { return '0' + y; }
+
+void printMove(Move move) {
+    printf("%c%c-%c%c", xChar(move.start.x), yChar(move.start.y), xChar(move.end.x), yChar(move.end.y));
+}
+
+void printBoard(Piece board[64]) {
     int i;
     printf("\n   abcdefgh\n");
     for( i = 0; i < 64; i++ ) {
@@ -68,35 +95,23 @@ void printBoard(piece board[64]) {
 
 // ---- Logic ---- //
 
-char backrow[] = "rnbqkbnr";
-
-void initBoard(piece board[64]) {
+void initBoard(Piece board[64]) {
     int i;
-    piece p;
-
-    p.type = EMPTY;
-    p.color = BLACK;
-    for ( i = 0; i < 64; i++) board[i] = p;
+    Piece p = (Piece) {EMPTY, BLACK};
+    for ( i = 16; i < 48; i++) board[i] = p;
 
     for ( i = 0; i < 8; i++) {
-        p.type = charToType(backrow[i]);
-        board[indexOf(i, 0)] = p;
-        p.type = PAWN;
-        board[indexOf(i, 1)] = p;
-    }
-
-    p.color = WHITE;
-    for ( i = 0; i < 8; i++) {
-        p.type = charToType(backrow[i]);
-        board[indexOf(i, 7)] = p;
-        p.type = PAWN;
-        board[indexOf(i, 6)] = p;
+        int type = charToType("rnbqkbnr"[i]);
+        board[indexOf(i, 0)] = (Piece) {type, BLACK};
+        board[indexOf(i, 1)] = (Piece) {PAWN, BLACK};
+        board[indexOf(i, 7)] = (Piece) {type, WHITE};
+        board[indexOf(i, 6)] = (Piece) {PAWN, WHITE};
     }
 }
 
 int main()
 {
-    piece board[64];
+    Piece board[64];
     initBoard(&board);
     printBoard(&board);
     return 0;
