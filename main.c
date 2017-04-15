@@ -40,6 +40,8 @@ typedef struct { unsigned int type:3, color:1; bool moved:1; }  Piece;
 typedef struct { unsigned int x:4, y:4; }                  Vec;
 typedef Piece                                              Board[64];
 
+bool vecEqual(Vec a, Vec b) { return a.x == b.x &&  a.y == b.y; }
+
 int vecIndex(Vec pos) { return pos.x + pos.y * 8; }
 Vec indexVec(int index) {
     Vec pos;
@@ -198,6 +200,14 @@ void movePiece(Board board, Vec from, Vec to) {
     p.moved = true;
     setPiece(board, from, NULL_PIECE);
     setPiece(board, to, p);
+}
+
+bool isLegal(Board board, Vec from, Vec to) {
+    Vec moves[64];
+    int count = getMovesForPiece(from, board, moves);
+    int i;
+    for ( i = 0; i < count; i++ ) { if ( vecEqual(moves[i], to) ) return true; }
+    return false;
 }
 
 // ---- Program ---- //
