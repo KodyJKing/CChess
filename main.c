@@ -9,18 +9,18 @@ int charToType(char c);
 
 // ---- Representation ---- //
 
-#define KING   0
-#define QUEEN  1
-#define BISHOP 2
-#define KNIGHT 3
-#define ROOK   4
-#define PAWN   5
-#define EMPTY  6
+#define EMPTY  0
+#define KING   1
+#define QUEEN  2
+#define BISHOP 3
+#define KNIGHT 4
+#define ROOK   5
+#define PAWN   6
 
 #define WHITE  0
 #define BLACK  1
 
-#define NULL_PIECE (Piece){6, 0, 0}
+#define NULL_PIECE (Piece){0, 0, 0}
 
 #define DIR_N  (Vec){ 0,   1}
 #define DIR_NE (Vec){ 1,   1}
@@ -41,9 +41,11 @@ int charToType(char c);
 #define DIR_NWW (Vec){-2,  1}
 #define DIR_NNW (Vec){-1,  2}
 
-typedef struct { unsigned int type:3, color:1; bool moved:1; }  Piece;
-typedef struct { unsigned int x:4, y:4; }                  Vec;
-typedef Piece                                              Board[64];
+typedef struct { unsigned int type:3, color:1; bool moved:1; } Piece;
+typedef struct { unsigned int x:4, y:4; }                      Vec;
+typedef struct { Vec from, to; Piece captured; }               Move;
+typedef Piece                                                  Board[64];
+typedef struct { Vec kings[2]; int turn; Board board; }        Game;
 
 bool vecEqual(Vec a, Vec b) { return a.x == b.x &&  a.y == b.y; }
 
@@ -63,11 +65,11 @@ int yOf(int index) { return (index - (index % 8)) / 8; }
 bool inBoard(Vec pos) { return pos.x >= 0 && pos.x < 8 && pos.y >= 0 && pos.y < 8; }
 Piece getPiece(Board board, Vec pos) { return board[vecIndex(pos)]; }
 void setPiece(Board board, Vec pos, Piece piece) { board[vecIndex(pos)] = piece; }
-bool occupied(Board board, Vec pos) { return getPiece(board, pos).type != EMPTY; }
+bool occupied(Board board, Vec pos) { return inBoard(pos) && getPiece(board, pos).type != EMPTY; }
 
 void initBoard(Board board) {
     int i;
-    Piece p = (Piece){EMPTY, BLACK};
+    Piece p = (Piece){EMPTY, WHITE};
     for ( i = indexOf(0, 2); i < indexOf(0, 6); i++) board[i] = p;
 
     for ( i = 0; i < 8; i++ ) {
@@ -147,7 +149,19 @@ int getMoves(Vec pos, int type, bool moved, int color, Board board, Vec *moves) 
             count += slideCardinals(pos, 7, color, board, moves + count);
             break; }
         case PAWN: {
-            count += slide(pos, color == BLACK ? DIR_N : DIR_S, moved ? 1 : 2, color, board, moves + count);
+            int slides;
+
+            slides = slide(pos, color == BLACK ? DIR_N : DIR_S, moved ? 1 : 2, color, board, moves + count);
+            count += slides;
+            if (slides > 0 && occupied(board, moves[count - 1]) ) count--; //Pawns can't capture forward.
+
+            slides = slide(pos, color == BLACK ? DIR_NE : DIR_SE, 1, color, board, moves + count);
+            count += slides;
+            if (slides > 0 && !occupied(board, moves[count - 1]) ) count--; //Pawns MUST capture diagonal.
+
+            slides = slide(pos, color == BLACK ? DIR_NW : DIR_SW, 1, color, board, moves + count);
+            count += slides;
+            if (slides > 0 && !occupied(board, moves[count - 1]) ) count--; //Pawns MUST capture diagonal.
             break;}
     }
     return count;
@@ -158,21 +172,55 @@ int getMovesForPiece(Vec pos, Board board, Vec *moves){
     return getMoves(pos, p.type, p.moved, p.color, board, moves);
 }
 
-void movePiece(Board board, Vec from, Vec to) {
+//Capturing moves are direction reversible so it's OK to scan from the friendly piece to the enemy pieces.
+//If we do this for each type, we can be sure no pieces threaten our piece.
+//If we can 'capture' them, so they can capture us.
+bool isSafe(Board board, Vec pos) {
+    int type, color, count, i;
+    color = getPiece(board, pos).color;
+    Vec moves[64];
+    for ( type = 0; type < 6; type++ ) {
+        //It's safe to assume the enemy piece has moved since there are no capturing moves which are only first moves.
+        //(Pawn opening and castling are non-capturing.)
+        count = getMoves(pos, type, true, color, board, moves);
+        for ( i = 0; i < count; i++ ) {
+                if ( getPiece(board, moves[i]).type == type )
+                    return false;
+        }
+    }
+    return true;
+}
+
+Move movePiece(Board board, Vec from, Vec to) {
     Piece p = getPiece(board, from);
+    Piece captured = getPiece(board, to);
     p.moved = true;
     setPiece(board, from, NULL_PIECE);
     setPiece(board, to, p);
+    return (Move){from, to, captured};
+}
+
+void undoMove(Board board, Move move) {
+    Piece p = getPiece(board, move.to);
+    setPiece(board, move.to, move.captured);
+    setPiece(board, move.from, p);
 }
 
 bool isLegal(Board board, Vec from, Vec to) {
     Vec moves[64];
     int count = getMovesForPiece(from, board, moves);
     int i;
-    for ( i = 0; i < count; i++ ) { if ( vecEqual(moves[i], to) ) return true; }
+    for ( i = 0; i < count; i++ ) {
+            if ( vecEqual(moves[i], to) ) {
+                if (getPiece(board, from).type != KING) return true;
+                Move move = movePiece(board, from, to);
+                bool safe = isSafe(board, to);
+                undoMove(board, move);
+                return safe;
+            }
+    }
     return false;
 }
-
 
 // ---- Input / Output ---- //
 
@@ -197,7 +245,7 @@ int charToPiece(char c) {
 
 char pieceToChar(Piece p, Vec pos) {
     if ( p.type == EMPTY ) return ",."[(pos.x + pos.y) % 2];
-    char result = "kqbnrp"[p.type];
+    char result = "kqbnrp"[p.type - 1];
     return p.color == WHITE ? result : toupper(result);
 }
 
@@ -238,6 +286,7 @@ void requestMove(Board board, Vec *from, Vec *to) {
     char input[6];
 
     while (true) {
+
         printf("\nEnter start:\n");
         scanf("%s", input);
         parseVec(input, from);
@@ -281,6 +330,7 @@ int main()
         printf("\n"); printVec(from); printf("-"); printVec(to); printf("\n");
         if (isLegal(board, from, to)) {
             movePiece(board, from, to);
+
             printBoard(board);
         } else {
             printf("\nThat move is illegal!\n");
