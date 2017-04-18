@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+// ---- Declarations ---- //
+
+int charToType(char c);
+
 // ---- Representation ---- //
 
 #define KING   0
@@ -60,63 +64,21 @@ Piece getPiece(Board board, Vec pos) { return board[vecIndex(pos)]; }
 void setPiece(Board board, Vec pos, Piece piece) { board[vecIndex(pos)] = piece; }
 bool occupied(Board board, Vec pos) { return getPiece(board, pos).type != EMPTY; }
 
-// ---- Printing ---- //
-
-int charToType(char c) {
-    c = tolower(c);
-    switch(c) {
-        case 'k': return KING;
-        case 'q': return QUEEN;
-        case 'b': return BISHOP;
-        case 'n': return KNIGHT;
-        case 'r': return ROOK;
-        case 'p': return PAWN;
-        case '.': return EMPTY;
-    }
-}
-
-int charToPiece(char c) {
-    Piece p;
-    p.type = charToType(c);
-    p.color = (c == tolower(c)) ? WHITE : BLACK;
-}
-
-char pieceToChar(Piece p, Vec pos) {
-    if ( p.type == EMPTY ) return "_#"[(pos.x + pos.y) % 2];
-    char result = "kqbnrp"[p.type];
-    return p.color == WHITE ? result : toupper(result);
-}
-
-char xChar(int x) { return 'A' + x; }
-char yChar(int y) { return '0' + y; }
-
-void printVec(Vec pos) { printf("%c%c", xChar(pos.x), yChar(pos.y)); }
-
-void printBoard(Board board) {
-    printf("\n    ABCDEFGH\n    ________");
-    int i;
-    for( i = 0; i < 64; i++ ) {
-        if ( xOf(i) == 0 ) printf("\n %d |", yOf(i));
-        putchar(pieceToChar( board[i], indexVec(i)));
-    }
-    printf("\n");
-}
-
-// ---- Logic ---- //
-
 void initBoard(Board board) {
     int i;
-    Piece p = (Piece) {EMPTY, BLACK};
+    Piece p = (Piece){EMPTY, BLACK};
     for ( i = indexOf(0, 2); i < indexOf(0, 6); i++) board[i] = p;
 
     for ( i = 0; i < 8; i++ ) {
         int type = charToType("rnbqkbnr"[i]);
-        board[indexOf(i, 0)] = (Piece) {type, BLACK};
-        board[indexOf(i, 1)] = (Piece) {PAWN, BLACK};
-        board[indexOf(i, 7)] = (Piece) {type, WHITE};
-        board[indexOf(i, 6)] = (Piece) {PAWN, WHITE};
+        board[indexOf(i, 0)] = (Piece){type, BLACK};
+        board[indexOf(i, 1)] = (Piece){PAWN, BLACK};
+        board[indexOf(i, 7)] = (Piece){type, WHITE};
+        board[indexOf(i, 6)] = (Piece){PAWN, WHITE};
     }
 }
+
+// ---- Game Logic ---- //
 
 //Returns the max distance slid. Adds possible positions to moves array.
 int slide(Vec pos, Vec dir, int maxSlide, int color, Board board, Vec *moves) {
@@ -210,6 +172,53 @@ bool isLegal(Board board, Vec from, Vec to) {
     return false;
 }
 
+
+// ---- Input / Output ---- //
+
+int charToType(char c) {
+    c = tolower(c);
+    switch(c) {
+        case 'k': return KING;
+        case 'q': return QUEEN;
+        case 'b': return BISHOP;
+        case 'n': return KNIGHT;
+        case 'r': return ROOK;
+        case 'p': return PAWN;
+        case '.': return EMPTY;
+    }
+}
+
+int charToPiece(char c) {
+    Piece p;
+    p.type = charToType(c);
+    p.color = (c == tolower(c)) ? WHITE : BLACK;
+}
+
+char pieceToChar(Piece p, Vec pos) {
+    if ( p.type == EMPTY ) return "_#"[(pos.x + pos.y) % 2];
+    char result = "kqbnrp"[p.type];
+    return p.color == WHITE ? result : toupper(result);
+}
+
+char xChar(int x) { return 'A' + x; }
+char yChar(int y) { return '0' + y; }
+
+void printVec(Vec pos) { printf("%c%c", xChar(pos.x), yChar(pos.y)); }
+
+void printBoard(Board board) {
+    printf("\n    ABCDEFGH\n    ________");
+    int i;
+    for( i = 0; i < 64; i++ ) {
+        if ( xOf(i) == 0 ) printf("\n %d |", yOf(i));
+        putchar(pieceToChar( board[i], indexVec(i)));
+    }
+    printf("\n");
+}
+
+void getMove(Vec *from, Vec *to) {
+
+}
+
 // ---- Program ---- //
 
 int main()
@@ -221,23 +230,6 @@ int main()
     movePiece(board, (Vec){0,1}, (Vec){0,2});
 
     printBoard(board);
-
-    /*
-    Vec moves[64];
-    Vec pos = (Vec){0, 2};
-
-    int count = getMovesForPiece(pos, board, moves);
-
-    printf("\nPiece type: %c\n", pieceToChar(getPiece(board, pos), pos));
-    printf("Results count: %i\n", count);
-
-    int i;
-    for ( i = 0; i < count; i++ ) {
-        printVec(moves[i]);
-        if (i != count - 1) printf(", ");
-    }
-    printf("\n");
-    */
 
     return 0;
 }
