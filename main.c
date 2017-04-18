@@ -200,13 +200,16 @@ char pieceToChar(Piece p, Vec pos) {
     return p.color == WHITE ? result : toupper(result);
 }
 
-char xChar(int x) { return 'A' + x; }
+char xChar(int x) { return 'a' + x; }
 char yChar(int y) { return '0' + y; }
+
+int charX(char c) { return (int)(c - 'a'); }
+int charY(char c) { return (int)(c - '0'); }
 
 void printVec(Vec pos) { printf("%c%c", xChar(pos.x), yChar(pos.y)); }
 
 void printBoard(Board board) {
-    printf("\n    ABCDEFGH\n    ________");
+    printf("\n    abcdefgh\n    ________");
     int i;
     for( i = 0; i < 64; i++ ) {
         if ( xOf(i) == 0 ) printf("\n %d |", yOf(i));
@@ -215,8 +218,32 @@ void printBoard(Board board) {
     printf("\n");
 }
 
-void getMove(Vec *from, Vec *to) {
+void requestVec(Vec *v) {
+    char coords[3];
 
+    while (true) {
+        scanf("%s", coords);
+
+        if (coords[2] != '\0') {
+            printf("\nInput is too long! Use form xy:\n");
+            continue;
+        }
+
+        v -> x = charX(coords[0]);
+        v -> y = charY(coords[1]);
+        if ( inBoard(*v) ) {
+            break;
+        } else {
+            printf("\nThat's not in the board!");
+        }
+    }
+}
+
+void getMove(Vec *from, Vec *to) {
+    printf("\nEnter start in the form xy:\n");
+    requestVec(from);
+    printf("\nEnter destination in the form xy:\n");
+    requestVec(to);
 }
 
 // ---- Program ---- //
@@ -227,9 +254,17 @@ int main()
     initBoard(board);
     printBoard(board);
 
-    movePiece(board, (Vec){0,1}, (Vec){0,2});
-
-    printBoard(board);
+    Vec from, to;
+    while (true) {
+        getMove(&from, &to);
+        printf("\n"); printVec(from); printf("-"); printVec(to); printf("\n");
+        if (isLegal(board, from, to)) {
+            movePiece(board, from, to);
+            printBoard(board);
+        } else {
+            printf("\nThat move is illegal!\n");
+        }
+    }
 
     return 0;
 }
