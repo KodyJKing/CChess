@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 // ---- Declarations ---- //
 
@@ -195,7 +196,7 @@ int charToPiece(char c) {
 }
 
 char pieceToChar(Piece p, Vec pos) {
-    if ( p.type == EMPTY ) return "_#"[(pos.x + pos.y) % 2];
+    if ( p.type == EMPTY ) return ",."[(pos.x + pos.y) % 2];
     char result = "kqbnrp"[p.type];
     return p.color == WHITE ? result : toupper(result);
 }
@@ -218,32 +219,52 @@ void printBoard(Board board) {
     printf("\n");
 }
 
-void requestVec(Vec *v) {
-    char coords[3];
-
+void parseVec(char *input, Vec *v) {
     while (true) {
-        scanf("%s", coords);
-
-        if (coords[2] != '\0') {
+        if (input[2] != '\0') {
             printf("\nInput is too long! Use form xy:\n");
             continue;
         }
 
-        v -> x = charX(coords[0]);
-        v -> y = charY(coords[1]);
-        if ( inBoard(*v) ) {
-            break;
-        } else {
-            printf("\nThat's not in the board!");
-        }
+        v -> x = charX(input[0]);
+        v -> y = charY(input[1]);
+        if ( inBoard(*v) ) break;
+        else printf("\nThat's not on the board!\nx must be in a-h\ny must be in 0-7\n");
+        scanf("%s", input);
     }
 }
 
-void getMove(Vec *from, Vec *to) {
-    printf("\nEnter start in the form xy:\n");
-    requestVec(from);
-    printf("\nEnter destination in the form xy:\n");
-    requestVec(to);
+void requestMove(Board board, Vec *from, Vec *to) {
+    char input[6];
+
+    while (true) {
+    printf("\nEnter start:\n");
+    scanf("%s", input);
+    parseVec(input, from);
+
+    Vec moves[64];
+    int count = getMovesForPiece(*from, board, moves);
+
+    if ( count <= 0 ) {
+        printf("\nNo possible moves!\n");
+        continue;
+    }
+
+    printf("\nPossible moves: ");
+    int i;
+    for ( i = 0; i < count; i++ ) {
+        printVec(moves[i]);
+        if (i != count - 1) printf(", ");
+    }
+
+    printf("\nEnter destination or type 'back' to go back:\n");
+    scanf("%s", input);
+
+    if (strcmp(input, "back") == 0) continue;
+
+    parseVec(input, to);
+    return;
+    }
 }
 
 // ---- Program ---- //
@@ -256,7 +277,7 @@ int main()
 
     Vec from, to;
     while (true) {
-        getMove(&from, &to);
+        requestMove(board, &from, &to);
         printf("\n"); printVec(from); printf("-"); printVec(to); printf("\n");
         if (isLegal(board, from, to)) {
             movePiece(board, from, to);
