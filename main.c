@@ -238,32 +238,32 @@ void requestMove(Board board, Vec *from, Vec *to) {
     char input[6];
 
     while (true) {
-    printf("\nEnter start:\n");
-    scanf("%s", input);
-    parseVec(input, from);
+        printf("\nEnter start:\n");
+        scanf("%s", input);
+        parseVec(input, from);
 
-    Vec moves[64];
-    int count = getMovesForPiece(*from, board, moves);
+        Vec moves[64];
+        int count = getMovesForPiece(*from, board, moves);
 
-    if ( count <= 0 ) {
-        printf("\nNo possible moves!\n");
-        continue;
-    }
+        if ( count <= 0 ) {
+            printf("\nNo possible moves!\n");
+            continue;
+        }
 
-    printf("\nPossible moves: ");
-    int i;
-    for ( i = 0; i < count; i++ ) {
-        printVec(moves[i]);
-        if (i != count - 1) printf(", ");
-    }
+        printf("\nPossible moves: ");
+        int i;
+        for ( i = 0; i < count; i++ ) {
+            printVec(moves[i]);
+            if (i != count - 1) printf(", ");
+        }
 
-    printf("\nEnter destination or type 'back' to go back:\n");
-    scanf("%s", input);
+        printf("\nEnter destination or type 'back' to go back:\n");
+        scanf("%s", input);
 
-    if (strcmp(input, "back") == 0) continue;
+        if (strcmp(input, "back") == 0) continue;
 
-    parseVec(input, to);
-    return;
+        parseVec(input, to);
+        return;
     }
 }
 
