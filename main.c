@@ -174,7 +174,7 @@ int getMovesForPiece(Vec pos, Board board, Vec *moves){
 
 //Capturing moves are direction reversible so it's OK to scan from the friendly piece to the enemy pieces.
 //If we do this for each type, we can be sure no pieces threaten our piece.
-//If we can 'capture' them, so they can capture us.
+//If we can 'capture' them, they can capture us.
 bool isSafe(Board board, Vec pos) {
     int type, color, count, i;
     color = getPiece(board, pos).color;
